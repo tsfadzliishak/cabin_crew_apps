@@ -12,10 +12,11 @@ import { Card, ActivityIndicator, Chip, Divider } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRosterStore } from '../../src/store/rosterStore';
 import { useProfileStore } from '../../src/store/profileStore';
-import { format, parse, addHours } from 'date-fns';
+import { format, parse, addMinutes } from 'date-fns';
 import { THEME } from '../../src/constants/theme';
 import { getAirportFullName } from '../../src/constants/airports';
 import AppHeader from '../../src/components/AppHeader';
+import { useSettingsStore } from '../../src/store/settingsStore';
 
 const MALAYSIA_TZ = 'Asia/Kuala_Lumpur';
 
@@ -50,11 +51,15 @@ function parseTime(timeStr: string): Date {
 export default function TodayScreen() {
   const { roster, loading, fetchRoster, getTodayEntry } = useRosterStore();
   const { name } = useProfileStore();
+  const { prepMinutes, commuteMinutes, loaded: settingsLoaded, loadSettings } = useSettingsStore();
   const [refreshing, setRefreshing] = useState(false);
   const todayEntry = getTodayEntry();
 
   useEffect(() => {
     fetchRoster();
+    if (!settingsLoaded) {
+      loadSettings();
+    }
   }, []);
 
   const onRefresh = async () => {
@@ -63,12 +68,20 @@ export default function TodayScreen() {
     setRefreshing(false);
   };
 
+  const formatDurationLabel = (minutes: number) => {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    if (h === 0) return `${m} minutes`;
+    if (m === 0) return `${h} hour${h > 1 ? 's' : ''}`;
+    return `${h}h ${m}m`;
+  };
+
   const calculateTimes = () => {
     if (!todayEntry || !todayEntry.duty_start_time) return null;
 
     const dutyStart = parseTime(todayEntry.duty_start_time);
-    const prepTime = addHours(dutyStart, -2); // 2 hours before
-    const commuteTime = addHours(dutyStart, -1); // 1 hour before
+    const prepTime = addMinutes(dutyStart, -prepMinutes); // configurable
+    const commuteTime = addMinutes(dutyStart, -commuteMinutes); // configurable
 
     return {
       prepTime: format(prepTime, 'HH:mm'),
@@ -159,7 +172,7 @@ export default function TodayScreen() {
                 <View style={styles.timeInfo}>
                   <Text style={styles.timeLabel}>Start Preparation</Text>
                   <Text style={styles.timeValue}>{times.prepTime}</Text>
-                  <Text style={styles.timeSubtext}>2 hours before flight</Text>
+                  <Text style={styles.timeSubtext}>{formatDurationLabel(prepMinutes)} before flight</Text>
                 </View>
               </View>
 
@@ -170,7 +183,7 @@ export default function TodayScreen() {
                 <View style={styles.timeInfo}>
                   <Text style={styles.timeLabel}>Leave for Airport</Text>
                   <Text style={styles.timeValue}>{times.commuteTime}</Text>
-                  <Text style={styles.timeSubtext}>1 hour before duty</Text>
+                  <Text style={styles.timeSubtext}>{formatDurationLabel(commuteMinutes)} before duty</Text>
                 </View>
               </View>
 
