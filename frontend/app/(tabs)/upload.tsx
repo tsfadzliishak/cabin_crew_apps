@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   Alert,
   Platform,
 } from 'react-native';
@@ -13,11 +12,15 @@ import { Card, Button, ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useRosterStore } from '../../src/store/rosterStore';
+import { useProfileStore } from '../../src/store/profileStore';
+import { THEME } from '../../src/constants/theme';
+import AppHeader from '../../src/components/AppHeader';
 
 export default function UploadScreen() {
   const [uploading, setUploading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const { uploadRosterData } = useRosterStore();
+  const { name } = useProfileStore();
 
   const requestPermissions = async () => {
     if (Platform.OS !== 'web') {
@@ -273,10 +276,13 @@ export default function UploadScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView}>
+        {/* App Header with Logo */}
+        <AppHeader name={name} />
+
         <Card style={styles.card}>
           <Card.Content>
             <View style={styles.iconContainer}>
-              <MaterialCommunityIcons name="cloud-upload" size={64} color="#2196F3" />
+              <MaterialCommunityIcons name="cloud-upload" size={64} color={THEME.primary} />
             </View>
             <Text style={styles.title}>Upload Roster</Text>
             <Text style={styles.subtitle}>
@@ -289,6 +295,7 @@ export default function UploadScreen() {
                 onPress={pickImage}
                 icon="image"
                 style={styles.button}
+                buttonColor={THEME.primary}
                 disabled={uploading}
               >
                 Select Image
@@ -296,7 +303,7 @@ export default function UploadScreen() {
 
               {selectedImage && (
                 <View style={styles.selectedImageContainer}>
-                  <MaterialCommunityIcons name="check-circle" size={24} color="#4CAF50" />
+                  <MaterialCommunityIcons name="check-circle" size={24} color={THEME.secondary} />
                   <Text style={styles.selectedImageText}>Image selected</Text>
                 </View>
               )}
@@ -306,7 +313,8 @@ export default function UploadScreen() {
                   mode="contained"
                   onPress={uploadImage}
                   icon="upload"
-                  style={[styles.button, styles.uploadButton]}
+                  style={styles.button}
+                  buttonColor={THEME.secondary}
                   disabled={uploading}
                   loading={uploading}
                 >
@@ -328,6 +336,7 @@ export default function UploadScreen() {
               onPress={loadSampleData}
               icon="download"
               style={styles.button}
+              textColor={THEME.primary}
               disabled={uploading}
               loading={uploading}
             >
@@ -341,15 +350,15 @@ export default function UploadScreen() {
             <Text style={styles.cardTitle}>Supported Formats</Text>
             <View style={styles.formatList}>
               <View style={styles.formatItem}>
-                <MaterialCommunityIcons name="check" size={20} color="#4CAF50" />
+                <MaterialCommunityIcons name="check" size={20} color={THEME.secondary} />
                 <Text style={styles.formatText}>JPEG images</Text>
               </View>
               <View style={styles.formatItem}>
-                <MaterialCommunityIcons name="check" size={20} color="#4CAF50" />
+                <MaterialCommunityIcons name="check" size={20} color={THEME.secondary} />
                 <Text style={styles.formatText}>PNG images</Text>
               </View>
               <View style={styles.formatItem}>
-                <MaterialCommunityIcons name="information" size={20} color="#FF9800" />
+                <MaterialCommunityIcons name="information" size={20} color={THEME.warning} />
                 <Text style={styles.formatText}>Clear, well-lit photos work best</Text>
               </View>
             </View>
@@ -363,16 +372,30 @@ export default function UploadScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: THEME.background,
   },
   scrollView: {
+    flex: 1,
+  },
+  nameHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: THEME.primary,
+    gap: 12,
+  },
+  nameText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: THEME.white,
     flex: 1,
   },
   card: {
     margin: 16,
     marginTop: 8,
     marginBottom: 8,
-    elevation: 2,
+    elevation: 3,
+    backgroundColor: THEME.cardBackground,
   },
   iconContainer: {
     alignItems: 'center',
@@ -382,13 +405,13 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     textAlign: 'center',
-    color: '#333',
+    color: THEME.primary,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 14,
     textAlign: 'center',
-    color: '#666',
+    color: THEME.textLight,
     marginBottom: 24,
     lineHeight: 20,
   },
@@ -398,32 +421,29 @@ const styles = StyleSheet.create({
   button: {
     marginVertical: 8,
   },
-  uploadButton: {
-    backgroundColor: '#4CAF50',
-  },
   selectedImageContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 12,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: THEME.accent + '20',
     borderRadius: 8,
   },
   selectedImageText: {
     marginLeft: 8,
     fontSize: 14,
-    color: '#4CAF50',
+    color: THEME.secondary,
     fontWeight: '600',
   },
   cardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: THEME.primary,
     marginBottom: 8,
   },
   cardText: {
     fontSize: 14,
-    color: '#666',
+    color: THEME.textLight,
     marginBottom: 16,
     lineHeight: 20,
   },
@@ -436,7 +456,7 @@ const styles = StyleSheet.create({
   },
   formatText: {
     fontSize: 14,
-    color: '#666',
+    color: THEME.textLight,
     marginLeft: 8,
   },
 });

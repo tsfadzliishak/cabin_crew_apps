@@ -11,8 +11,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card, ActivityIndicator, Chip, Divider } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRosterStore } from '../../src/store/rosterStore';
-import { format, parse, addHours, addMinutes, differenceInHours, differenceInMinutes } from 'date-fns';
-import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
+import { useProfileStore } from '../../src/store/profileStore';
+import { format, parse, addHours } from 'date-fns';
+import { THEME } from '../../src/constants/theme';
+import { getAirportFullName } from '../../src/constants/airports';
+import AppHeader from '../../src/components/AppHeader';
 
 const MALAYSIA_TZ = 'Asia/Kuala_Lumpur';
 
@@ -44,13 +47,9 @@ function parseTime(timeStr: string): Date {
   return date;
 }
 
-function formatDuration(hours: number, minutes: number): string {
-  if (hours === 0) return `${minutes}m`;
-  return `${hours}h ${minutes}m`;
-}
-
 export default function TodayScreen() {
   const { roster, loading, fetchRoster, getTodayEntry } = useRosterStore();
+  const { name } = useProfileStore();
   const [refreshing, setRefreshing] = useState(false);
   const todayEntry = getTodayEntry();
 
@@ -82,7 +81,7 @@ export default function TodayScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#2196F3" />
+          <ActivityIndicator size="large" color={THEME.primary} />
           <Text style={styles.loadingText}>Loading roster...</Text>
         </View>
       </SafeAreaView>
@@ -94,11 +93,19 @@ export default function TodayScreen() {
       <SafeAreaView style={styles.container}>
         <ScrollView
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={onRefresh}
+              tintColor={THEME.primary}
+              colors={[THEME.primary]}
+            />
           }
         >
+          {/* App Header with Logo */}
+          <AppHeader name={name} />
+
           <View style={styles.emptyContainer}>
-            <MaterialCommunityIcons name="calendar-blank" size={64} color="#ccc" />
+            <MaterialCommunityIcons name="calendar-blank" size={64} color={THEME.border} />
             <Text style={styles.emptyText}>No flights scheduled today</Text>
             <Text style={styles.emptySubtext}>Pull down to refresh</Text>
           </View>
@@ -114,16 +121,24 @@ export default function TodayScreen() {
       <ScrollView
         style={styles.scrollView}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            tintColor={THEME.primary}
+            colors={[THEME.primary]}
+          />
         }
       >
+        {/* App Header with Logo */}
+        <AppHeader name={name} />
+
         {/* Header Card */}
         <Card style={styles.headerCard}>
           <Card.Content>
             <Text style={styles.dateText}>{todayEntry.date}</Text>
             <Text style={styles.dayText}>{todayEntry.day}</Text>
             {todayEntry.duty_hours && (
-              <Chip icon="clock-outline" style={styles.dutyChip}>
+              <Chip icon="clock-outline" style={styles.dutyChip} textStyle={styles.chipTextStyle}>
                 Duty: {todayEntry.duty_hours}
               </Chip>
             )}
@@ -138,8 +153,8 @@ export default function TodayScreen() {
               <Divider style={styles.divider} />
               
               <View style={styles.timeRow}>
-                <View style={styles.timeIconContainer}>
-                  <MaterialCommunityIcons name="shower" size={24} color="#FF9800" />
+                <View style={[styles.timeIconContainer, { backgroundColor: THEME.prep }]}>
+                  <MaterialCommunityIcons name="shower" size={24} color={THEME.white} />
                 </View>
                 <View style={styles.timeInfo}>
                   <Text style={styles.timeLabel}>Start Preparation</Text>
@@ -149,8 +164,8 @@ export default function TodayScreen() {
               </View>
 
               <View style={styles.timeRow}>
-                <View style={styles.timeIconContainer}>
-                  <MaterialCommunityIcons name="car" size={24} color="#2196F3" />
+                <View style={[styles.timeIconContainer, { backgroundColor: THEME.commute }]}>
+                  <MaterialCommunityIcons name="car" size={24} color={THEME.white} />
                 </View>
                 <View style={styles.timeInfo}>
                   <Text style={styles.timeLabel}>Leave for Airport</Text>
@@ -160,8 +175,8 @@ export default function TodayScreen() {
               </View>
 
               <View style={styles.timeRow}>
-                <View style={styles.timeIconContainer}>
-                  <MaterialCommunityIcons name="briefcase" size={24} color="#4CAF50" />
+                <View style={[styles.timeIconContainer, { backgroundColor: THEME.duty }]}>
+                  <MaterialCommunityIcons name="briefcase" size={24} color={THEME.white} />
                 </View>
                 <View style={styles.timeInfo}>
                   <Text style={styles.timeLabel}>Duty Starts</Text>
@@ -180,58 +195,53 @@ export default function TodayScreen() {
               <Text style={styles.cardTitle}>✈️ Today's Flights</Text>
               <Divider style={styles.divider} />
               
-              {todayEntry.flights.map((flight, index) => {
-                const depTz = getAirportTimezone(flight.dep_airport);
-                const arrTz = getAirportTimezone(flight.arr_airport);
+              {todayEntry.flights.map((flight, index) => (
+                <View key={index} style={styles.flightCard}>
+                  <View style={styles.flightHeader}>
+                    <Text style={styles.flightNumber}>{flight.flight_number}</Text>
+                    {flight.aircraft_type && (
+                      <Chip style={styles.aircraftChip} textStyle={styles.chipText}>
+                        {flight.aircraft_type}
+                      </Chip>
+                    )}
+                  </View>
 
-                return (
-                  <View key={index} style={styles.flightCard}>
-                    <View style={styles.flightHeader}>
-                      <Text style={styles.flightNumber}>{flight.flight_number}</Text>
-                      {flight.aircraft_type && (
-                        <Chip style={styles.aircraftChip} textStyle={styles.chipText}>
-                          {flight.aircraft_type}
-                        </Chip>
+                  <View style={styles.routeContainer}>
+                    {/* Departure */}
+                    <View style={styles.locationContainer}>
+                      <Text style={styles.airportName}>{getAirportFullName(flight.dep_airport)}</Text>
+                      <Text style={styles.timeText}>{flight.dep_time}</Text>
+                      <View style={styles.dualTimeContainer}>
+                        <Text style={styles.timezoneLabel}>Local</Text>
+                        <Text style={styles.timezoneLabel}>MYT</Text>
+                      </View>
+                    </View>
+
+                    {/* Arrow */}
+                    <View style={styles.arrowContainer}>
+                      <MaterialCommunityIcons name="airplane" size={28} color={THEME.primary} />
+                      <View style={styles.arrowLine} />
+                      {flight.block_hours && (
+                        <Text style={styles.durationText}>{flight.block_hours}</Text>
                       )}
                     </View>
 
-                    <View style={styles.routeContainer}>
-                      {/* Departure */}
-                      <View style={styles.locationContainer}>
-                        <Text style={styles.airportCode}>{flight.dep_airport}</Text>
-                        <Text style={styles.timeText}>{flight.dep_time}</Text>
-                        <View style={styles.dualTimeContainer}>
-                          <Text style={styles.timezoneLabel}>Local</Text>
-                          <Text style={styles.timezoneLabel}>MYT</Text>
-                        </View>
-                      </View>
-
-                      {/* Arrow */}
-                      <View style={styles.arrowContainer}>
-                        <MaterialCommunityIcons name="airplane" size={24} color="#2196F3" />
-                        <View style={styles.arrowLine} />
-                        {flight.block_hours && (
-                          <Text style={styles.durationText}>{flight.block_hours}</Text>
-                        )}
-                      </View>
-
-                      {/* Arrival */}
-                      <View style={styles.locationContainer}>
-                        <Text style={styles.airportCode}>{flight.arr_airport}</Text>
-                        <Text style={styles.timeText}>{flight.arr_time}</Text>
-                        <View style={styles.dualTimeContainer}>
-                          <Text style={styles.timezoneLabel}>Local</Text>
-                          <Text style={styles.timezoneLabel}>MYT</Text>
-                        </View>
+                    {/* Arrival */}
+                    <View style={styles.locationContainer}>
+                      <Text style={styles.airportName}>{getAirportFullName(flight.arr_airport)}</Text>
+                      <Text style={styles.timeText}>{flight.arr_time}</Text>
+                      <View style={styles.dualTimeContainer}>
+                        <Text style={styles.timezoneLabel}>Local</Text>
+                        <Text style={styles.timezoneLabel}>MYT</Text>
                       </View>
                     </View>
-
-                    {index < todayEntry.flights.length - 1 && (
-                      <Divider style={styles.flightDivider} />
-                    )}
                   </View>
-                );
-              })}
+
+                  {index < todayEntry.flights.length - 1 && (
+                    <Divider style={styles.flightDivider} />
+                  )}
+                </View>
+              ))}
             </Card.Content>
           </Card>
         )}
@@ -241,7 +251,7 @@ export default function TodayScreen() {
           <Card style={styles.card}>
             <Card.Content>
               <View style={styles.dayOffContainer}>
-                <MaterialCommunityIcons name="beach" size={64} color="#4CAF50" />
+                <MaterialCommunityIcons name="beach" size={64} color={THEME.dayOff} />
                 <Text style={styles.dayOffText}>Day Off</Text>
                 {todayEntry.off_type && (
                   <Text style={styles.dayOffType}>{todayEntry.off_type}</Text>
@@ -258,7 +268,7 @@ export default function TodayScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: THEME.background,
   },
   scrollView: {
     flex: 1,
@@ -271,7 +281,20 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#666',
+    color: THEME.textLight,
+  },
+  nameHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: THEME.primary,
+    gap: 12,
+  },
+  nameText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: THEME.white,
+    flex: 1,
   },
   emptyContainer: {
     alignItems: 'center',
@@ -281,48 +304,54 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#666',
+    color: THEME.textLight,
     marginTop: 16,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#999',
+    color: THEME.textLighter,
     marginTop: 8,
   },
   headerCard: {
     margin: 16,
     marginBottom: 8,
-    elevation: 2,
+    elevation: 3,
+    backgroundColor: THEME.cardBackground,
   },
   dateText: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
+    color: THEME.primary,
   },
   dayText: {
     fontSize: 18,
-    color: '#666',
+    color: THEME.textLight,
     marginTop: 4,
   },
   dutyChip: {
     alignSelf: 'flex-start',
     marginTop: 12,
-    backgroundColor: '#E3F2FD',
+    backgroundColor: THEME.accent + '30',
+  },
+  chipTextStyle: {
+    color: THEME.secondary,
   },
   card: {
     margin: 16,
     marginTop: 8,
     marginBottom: 8,
-    elevation: 2,
+    elevation: 3,
+    backgroundColor: THEME.cardBackground,
   },
   cardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: THEME.primary,
     marginBottom: 8,
   },
   divider: {
     marginVertical: 12,
+    backgroundColor: THEME.border,
   },
   timeRow: {
     flexDirection: 'row',
@@ -333,7 +362,6 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#f5f5f5',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -343,17 +371,17 @@ const styles = StyleSheet.create({
   },
   timeLabel: {
     fontSize: 14,
-    color: '#666',
+    color: THEME.textLight,
     marginBottom: 4,
   },
   timeValue: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
+    color: THEME.primary,
   },
   timeSubtext: {
     fontSize: 12,
-    color: '#999',
+    color: THEME.textLighter,
     marginTop: 2,
   },
   flightCard: {
@@ -368,64 +396,72 @@ const styles = StyleSheet.create({
   flightNumber: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2196F3',
+    color: THEME.primary,
   },
   aircraftChip: {
     height: 28,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: THEME.secondary + '20',
   },
   chipText: {
     fontSize: 12,
+    color: THEME.secondary,
   },
   routeContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
+    gap: 8,
   },
   locationContainer: {
     flex: 1,
     alignItems: 'center',
   },
-  airportCode: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+  airportName: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: THEME.text,
+    textAlign: 'center',
+    marginBottom: 4,
   },
   timeText: {
-    fontSize: 18,
-    color: '#666',
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: THEME.primary,
     marginTop: 4,
   },
   dualTimeContainer: {
     flexDirection: 'row',
-    marginTop: 4,
+    marginTop: 6,
     gap: 8,
   },
   timezoneLabel: {
     fontSize: 10,
-    color: '#999',
-    backgroundColor: '#f5f5f5',
+    color: THEME.textLighter,
+    backgroundColor: THEME.accent + '20',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
   },
   arrowContainer: {
     alignItems: 'center',
-    marginHorizontal: 16,
+    justifyContent: 'center',
+    marginTop: 20,
+    width: 80,
   },
   arrowLine: {
     width: 60,
     height: 2,
-    backgroundColor: '#2196F3',
+    backgroundColor: THEME.primary,
     marginTop: 4,
   },
   durationText: {
     fontSize: 11,
-    color: '#999',
+    color: THEME.textLighter,
     marginTop: 4,
   },
   flightDivider: {
     marginTop: 16,
+    backgroundColor: THEME.border,
   },
   dayOffContainer: {
     alignItems: 'center',
@@ -434,12 +470,12 @@ const styles = StyleSheet.create({
   dayOffText: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#4CAF50',
+    color: THEME.dayOff,
     marginTop: 16,
   },
   dayOffType: {
     fontSize: 16,
-    color: '#666',
+    color: THEME.textLight,
     marginTop: 8,
   },
 });
